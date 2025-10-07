@@ -8,7 +8,11 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class EmailSendConsumer {
-  @KafkaListener(topics = "email.send", groupId = "email-send-group")
+  @KafkaListener(
+      topics = "email.send",
+      groupId = "email-send-group",
+      concurrency = "3"
+  )
   @RetryableTopic( // 해당 어노테이션 사용 시 DLT 토픽 생성하고, 자동으로 DLT 토픽에 실패 메세지 전송
       attempts = "5",  // 총 시도 5번, 재 시도 4번, 일반적으로 3~5회. 많이 하면 시스템 부하 커짐.
       backoff = @Backoff(delay = 1000, multiplier = 2)
@@ -27,6 +31,10 @@ public class EmailSendConsumer {
 
     ///  실제 이메일 발송 로직
     try {
+      // 파티션은 큐를 여러개로 늘려서 병렬 처리가 가능하게 하는 기본 단위이다.
+      // 각 토픽은 하나 이상의 파티션으로 구성할 수 있다.
+      // 메세지 처리의 순서 보장을 위해서 하나의 파티션은 하나의 컨슈모에만 연결된다. 하지만 하나의 컨슈머는 여러 파티션과 연결 될 수 있다.
+
       Thread.sleep(3000);
     } catch (InterruptedException e) {
       throw new RuntimeException("이메일 발송 실패!!");
